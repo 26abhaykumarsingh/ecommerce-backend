@@ -1,0 +1,45 @@
+const { Order } = require("../model/Order");
+
+exports.fetchOrderByUser = async (req, res) => {
+  const { user } = req.query;
+  try {
+    const orders = await Order.find({ user: user });
+    res.status(200).json(orders);
+  } catch (err) {
+    res.status(400).json(err);
+  }
+};
+
+exports.createOrder = async (req, res) => {
+  //this product we have to get from API body
+  const order = new Order(req.body);
+  try {
+    const doc = await order.save();
+    res.status(201).json(doc);
+  } catch (err) {
+    res.status(400).json(err);
+  }
+};
+
+exports.deleteOrder = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const order = await Order.findByIdAndDelete(id);
+    res.status(200).json(order);
+  } catch (err) {
+    res.status(400).json(err);
+  }
+};
+
+exports.updateOrder = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const order = await Order.findByIdAndUpdate(id, req.body, {
+      //no need to send entire product as body, just the data fields you wanna change.
+      new: true,
+    }); //findbyid finds by objectId ig, so whatever you put in there is compared with _id and not id or whatever data field you have made
+    res.status(201).json(order);
+  } catch (err) {
+    res.status(400).json(err);
+  }
+};
