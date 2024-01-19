@@ -20,7 +20,7 @@ exports.fetchAllProducts = async (req, res) => {
   // pagination = {_page:1, _limit=10} //_page=1&_limit=10
 
   //TODO : we have to try with multiple category and brands after change in front-end
-  let query = Product.find({});
+  let query = Product.find({ deleted: { $ne: true } });
   let totalProductsQuery = Product.find({}); //adding .count() to query will execute it (and it can be executed once only) which we dont want so making copy of it
 
   if (req.query.category) {

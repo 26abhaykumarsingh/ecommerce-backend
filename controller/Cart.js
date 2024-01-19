@@ -41,6 +41,7 @@ exports.updateCart = async (req, res) => {
       //no need to send entire product as body, just the data fields you wanna change.
       new: true,
     }); //findbyid finds by objectId ig, so whatever you put in there is compared with _id and not id or whatever data field you have made
+    const result = await cart.populate("product");
     res.status(201).json(cart);
   } catch (err) {
     res.status(400).json(err);
