@@ -82,7 +82,7 @@ passport.use(
             done(null, false, { message: "invalid credentials" });
           } else {
             const token = jwt.sign(sanitizeUser(user), SECRET_KEY); //creating token, first argument is payload, second is secret key, //token will contain sanitised user info which but hidden, only server will be able to read it
-            done(null, { token }); //this line sends to serializer
+            done(null, { id: user.id, role: user.role }); //this line sends to serializer
           }
         }
       );
