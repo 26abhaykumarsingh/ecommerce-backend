@@ -26,7 +26,13 @@ exports.createUser = async (req, res) => {
             res.status(400).json(err);
           } else {
             const token = jwt.sign(sanitizeUser(doc), SECRET_KEY); //token will contain sanitised user info which but hidden, only server will be able to read it
-            res.status(201).json(token);
+            res
+              .cookie("jwt", token, {
+                expires: new Date(Date.now() + 3600000),
+                httpOnly: true,
+              })
+              .status(201)
+              .json(token);
           }
         });
       }
@@ -57,7 +63,13 @@ exports.loginUser = async (req, res) => {
 
   //above part is handled in index.js in authentication now
 
-  res.json(req.user);
+  res
+    .cookie("jwt", req.user.token, {
+      expires: new Date(Date.now() + 3600000),
+      httpOnly: true,
+    })
+    .status(201)
+    .json(req.user.token);
 };
 
 exports.checkUser = async (req, res) => {
