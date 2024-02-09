@@ -22,6 +22,7 @@ exports.createUser = async (req, res) => {
         const doc = await user.save();
 
         req.login(sanitizeUser(doc), (err) => {
+          //req.login given by passport, this also calls serializer and adds to session
           if (err) {
             res.status(400).json(err);
           } else {
@@ -69,7 +70,7 @@ exports.loginUser = async (req, res) => {
       httpOnly: true,
     })
     .status(201)
-    .json(req.user.token);
+    .json(req.user.token); //req.user is a special object made by passport after user is authenticated
 };
 
 exports.checkAuth = async (req, res) => {

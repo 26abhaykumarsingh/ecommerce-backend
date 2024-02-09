@@ -3,9 +3,9 @@ const server = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
 const session = require("express-session");
-const passport = require("passport");
+const passport = require("passport"); //passport creates a session on server and session is contained in req.user, session ends after server reload
 const LocalStrategy = require("passport-local").Strategy;
-const crypto = require("crypto");
+const crypto = require("crypto"); //used to encrypt password
 const JwtStrategy = require("passport-jwt").Strategy;
 const ExtractJwt = require("passport-jwt").ExtractJwt;
 var jwt = require("jsonwebtoken"); //to create token
@@ -46,6 +46,9 @@ server.use(
     exposedHeaders: ["X-Total-Count"],
   })
 ); //cuz we cant call one port from another, like 8080 from 3000
+
+server.use(express.raw({ type: "application/json" })); //to make stripe work
+
 server.use(express.json()); //to parse req.body
 server.use("/products", isAuth(), productsRouters.router); // we can also use JWT token for client-only auth
 server.use("/brands", isAuth(), brandsRouters.router);
@@ -112,6 +115,7 @@ passport.use(
 
 //this creates session variable req.user on being called from callbacks
 passport.serializeUser(function (user, cb) {
+  //The serializeUser function is called when a user logs in, and it determines what user information should be stored in the session
   console.log("serialize", user);
   process.nextTick(function () {
     return cb(null, { id: user.id, role: user.role });
@@ -121,11 +125,98 @@ passport.serializeUser(function (user, cb) {
 
 //this changes session variable req.user when called from authorised request
 passport.deserializeUser(function (user, cb) {
+  // serializeUser is called on every subsequent request to deserialize the user information from the session and make it available in the req.user object.
   console.log("deserialize", user);
   process.nextTick(function () {
     return cb(null, user);
   });
 });
+
+//Payments
+
+// This is your test secret API key.
+const stripe = require("stripe")(
+  "sk_test_51NbjfnSIJDUbyxGCTjldaeJPiWNpwmiTfs9I5bVvpUfi6nobK4KlPhPQhtdZefJjXXYAIYY75iQQzb8ntX6OM5ap00PBEIngz6"
+);
+
+server.post("/create-payment-intent", async (req, res) => {
+  const { totalAmount } = req.body;
+
+  // Create a PaymentIntent with the order amount and currency
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: totalAmount * 100, //for decimal compensation
+    currency: "inr",
+    // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  });
+
+  res.send({
+    clientSecret: paymentIntent.client_secret,
+  });
+});
+
+//Webhook
+
+//TODO : we will capture actual order after deploying our server live on public URL
+
+// Replace this endpoint secret with your endpoint's unique secret
+// If you are testing with the CLI, find the secret by running 'stripe listen'
+// If you are using an endpoint defined with the API or dashboard, look in your webhook settings
+// at https://dashboard.stripe.com/webhooks
+const endpointSecret =
+  "whsec_64b11b632d539538fbc45bdcf0c3d239a77e037920758790ade5564dd38c6f3c";
+
+server.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  (request, response) => {
+    let event = request.body;
+    // Only verify the event if you have an endpoint secret defined.
+    // Otherwise use the basic event deserialized with JSON.parse
+    if (endpointSecret) {
+      // Get the signature sent by Stripe
+      const signature = request.headers["stripe-signature"];
+      try {
+        event = stripe.webhooks.constructEvent(
+          request.body,
+          signature,
+          endpointSecret
+        );
+      } catch (err) {
+        console.log(`⚠️  Webhook signature verification failed.`, err.message);
+        return response.sendStatus(400);
+      }
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case "payment_intent.succeeded":
+        const paymentIntent = event.data.object;
+        console.log({ paymentIntentSucceeded });
+        console.log(
+          `PaymentIntent for ${paymentIntent.amount} was successful!`
+        );
+        // Then define and call a method to handle the successful payment intent.
+        // handlePaymentIntentSucceeded(paymentIntent);
+        break;
+      case "payment_method.attached":
+        const paymentMethod = event.data.object;
+        // Then define and call a method to handle the successful attachment of a PaymentMethod.
+        // handlePaymentMethodAttached(paymentMethod);
+        break;
+      default:
+        // Unexpected event type
+        console.log(`Unhandled event type ${event.type}.`);
+    }
+
+    // Return a 200 response to acknowledge receipt of the event
+    response.send();
+  }
+);
+
+server.listen(4242, () => console.log("Running on port 4242"));
 
 main().catch((err) => console.log(err));
 

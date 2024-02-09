@@ -8,7 +8,7 @@ const userSchema = new Schema({
   addresses: { type: [Schema.Types.Mixed] },
   //TODO : we can make a seperate schema for addresses
   name: { type: String },
-  salt: Buffer,
+  salt: Buffer, //salt will be used to verify password (it was also used while encrypting)
 });
 
 const virtual = userSchema.virtual("id");
