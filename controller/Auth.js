@@ -4,7 +4,6 @@ var jwt = require("jsonwebtoken");
 
 const { User } = require("../model/User");
 const { sanitizeUser } = require("../services/common");
-const SECRET_KEY = "SECRET_KEY";
 
 exports.createUser = async (req, res) => {
   //this product we have to get from API body
@@ -26,7 +25,10 @@ exports.createUser = async (req, res) => {
           if (err) {
             res.status(400).json(err);
           } else {
-            const token = jwt.sign(sanitizeUser(doc), SECRET_KEY); //token will contain sanitised user info which but hidden, only server will be able to read it
+            const token = jwt.sign(
+              sanitizeUser(doc),
+              process.env.JWT_SECRET_KEY
+            ); //token will contain sanitised user info which but hidden, only server will be able to read it
             res
               .cookie("jwt", token, {
                 expires: new Date(Date.now() + 3600000),
@@ -64,16 +66,20 @@ exports.loginUser = async (req, res) => {
 
   //above part is handled in index.js in authentication now
 
+  const user = req.user;
+  console.log("login User ", user);
+  console.log("login user ", req.user.token);
   res
-    .cookie("jwt", req.user.token, {
+    .cookie("jwt", user.token, {
       expires: new Date(Date.now() + 3600000),
       httpOnly: true,
     })
     .status(201)
-    .json(req.user.token); //req.user is a special object made by passport after user is authenticated
+    .json({ id: user.id, role: user.role }); //req.user is a special object made by passport after user is authenticated
 };
 
 exports.checkAuth = async (req, res) => {
+  console.log("checkauth", req.user);
   if (req.user) {
     res.json(req.user);
   } else {

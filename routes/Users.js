@@ -6,7 +6,7 @@ const { fetchUserById, updateUser } = require("../controller/User");
 const router = express.Router();
 
 router
-  .post("/own", fetchUserById) // /users is already added in base path
+  .get("/own", fetchUserById) // /users is already added in base path
   .patch("/:id", updateUser);
 
 exports.router = router;
